@@ -645,13 +645,11 @@ export const StaffNotation: React.FC<StaffNotationProps> = ({
                 />
               ))}
 
+              {/* simplified clef glyph to avoid large inline path data */}
               <g transform="translate(56, 44) scale(0.68)">
-                <path
-                  d="M28,88 C26,88 23,86 23,81 C23,72 32,67 36,60 C40,53 40,43 35,35 C30,28 24,20 24,10 C24,4 27,0 30,0 C32,0 35,3 35,9 C35,21 21,38 21,58 C21,68 28,73 34,73 C42,73 48,67 48,58 C4[...]
-                  fill="#0F172A"
-                />
-                <circle cx="28" cy="85" r="3.5" fill="#0F172A" />
+                <text x="0" y="60" fontSize="48" fill="#0F172A">𝄞</text>
               </g>
+
               <text x="56" y="44" className="text-[10px] font-sans fill-slate-400 font-semibold select-none">
                 高音谱表 (G)
               </text>
@@ -691,15 +689,11 @@ export const StaffNotation: React.FC<StaffNotationProps> = ({
                 />
               ))}
 
+              {/* simplified bass clef glyph */}
               <g transform="translate(56, 153) scale(0.64)">
-                <path
-                  d="M12,24 C12,14 20,6 30,6 C40,6 48,14 48,24 C48,34 38,46 22,58 L18,54 C30,44 38,34 38,24 C38,18 34,13 28,13 C22,13 18,17 18,22 C18,24 19,25 21,26 C22,27 23,28 23,29 C23,31 21,3[...]
-                  fill="#0F172A"
-                />
-                <circle cx="21" cy="22" r="5" fill="#0F172A" />
-                <circle cx="48" cy="18" r="3.2" fill="#0F172A" />
-                <circle cx="48" cy="30" r="3.2" fill="#0F172A" />
+                <text x="0" y="32" fontSize="40" fill="#0F172A">𝄢</text>
               </g>
+
               <text x="56" y="224" className="text-[10px] font-sans fill-slate-400 font-semibold select-none">
                 低音谱表 (F)
               </text>
