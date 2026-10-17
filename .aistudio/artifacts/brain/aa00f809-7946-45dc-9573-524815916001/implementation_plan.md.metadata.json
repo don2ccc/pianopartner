@@ -1,0 +1,6 @@
+{
+  "summary": "Piano Maestro (琴韵识谱与MIDI实时练琴分析系统) 的完整架构与交互设计方案。涵盖 Web MIDI 输入分析、双核心练习模式（五线谱速记识别与经典曲目跟弹）、等待纠错与流转打分双机制、交互式高低音五线谱与钢琴键盘映射，以及多维度练琴诊断分析。",
+  "updatedAt": "2026-10-17T10:16:30.560280878Z",
+  "requestFeedback": true,
+  "userFacing": true
+}
