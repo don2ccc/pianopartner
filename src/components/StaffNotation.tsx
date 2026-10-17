@@ -287,6 +287,7 @@ export const StaffNotation: React.FC<StaffNotationProps> = ({
         )}
       </g>
     );
+  };
   // Render a stacked chord (柱式和弦) glyph
   const renderBlockChordGlyph = (chord: ChordItem, x: number) => {
     const chordNotes = chord.midis.map((m, idx) => {
@@ -423,7 +424,7 @@ export const StaffNotation: React.FC<StaffNotationProps> = ({
   };
 
   return (
-    <div className="w-full flex-1 flex flex-col justify-between relative bg-amber-50/90 border border-amber-200/80 rounded-2xl p-4 md:p-6 shadow-md select-none overflow-hidden backdrop-blur-xs min-h-[220px]">
+    <div className="w-full flex-1 flex flex-col justify-between relative bg-amber-50/90 border border-amber-200/80 rounded-2xl p-4 md:p-6 shadow-md select-none overflow-hidden backdrop-blur-xs min-h-[260px]">
       <div className="absolute inset-0 bg-gradient-to-b from-white/50 via-transparent to-amber-100/40 pointer-events-none" />
 
       {/* Top Rhythm & Metronome Pulse Indicator Strip */}
@@ -582,7 +583,7 @@ export const StaffNotation: React.FC<StaffNotationProps> = ({
             <button
               type="button"
               onClick={onOpenHowToPlay}
-              className="px-2 py-1 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-slate-700/60 text-emerald-400 hover:text-emerald-300 text-[11px] font-semibold cursor-pointer transition-colors flex items-center gap-1 shrink-0"
+              className="px-2 py-1 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-slate-700/60 text-emerald-400 hover:text-emerald-300 text-[11px] font-semibold cursor-pointer transition-colors"
               title="查看节奏光圈含义、节拍判定原理与如何弹准"
             >
               <span>❓ 怎么弹准节拍？</span>
@@ -646,7 +647,7 @@ export const StaffNotation: React.FC<StaffNotationProps> = ({
 
               <g transform="translate(56, 44) scale(0.68)">
                 <path
-                  d="M28,88 C26,88 23,86 23,81 C23,72 32,67 36,60 C40,53 40,43 35,35 C30,28 24,20 24,10 C24,4 27,0 30,0 C32,0 35,3 35,9 C35,21 21,38 21,58 C21,68 28,73 34,73 C42,73 48,67 48,58 C48,46 36,39 26,45 C23,47 21,49 20,49 C19,49 19,47 20,46 C23,39 31,34 39,35 C49,36 56,46 56,58 C56,72 45,82 33,82 C31,82 28,81 28,88 Z"
+                  d="M28,88 C26,88 23,86 23,81 C23,72 32,67 36,60 C40,53 40,43 35,35 C30,28 24,20 24,10 C24,4 27,0 30,0 C32,0 35,3 35,9 C35,21 21,38 21,58 C21,68 28,73 34,73 C42,73 48,67 48,58 C4[...]
                   fill="#0F172A"
                 />
                 <circle cx="28" cy="85" r="3.5" fill="#0F172A" />
@@ -692,7 +693,7 @@ export const StaffNotation: React.FC<StaffNotationProps> = ({
 
               <g transform="translate(56, 153) scale(0.64)">
                 <path
-                  d="M12,24 C12,14 20,6 30,6 C40,6 48,14 48,24 C48,34 38,46 22,58 L18,54 C30,44 38,34 38,24 C38,18 34,13 28,13 C22,13 18,17 18,22 C18,24 19,25 21,26 C22,27 23,28 23,29 C23,31 21,33 19,33 C15,33 12,29 12,24 Z"
+                  d="M12,24 C12,14 20,6 30,6 C40,6 48,14 48,24 C48,34 38,46 22,58 L18,54 C30,44 38,34 38,24 C38,18 34,13 28,13 C22,13 18,17 18,22 C18,24 19,25 21,26 C22,27 23,28 23,29 C23,31 21,3[...]
                   fill="#0F172A"
                 />
                 <circle cx="21" cy="22" r="5" fill="#0F172A" />
