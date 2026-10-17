@@ -1,6 +1,6 @@
 export type ClefType = 'treble' | 'bass';
 
-export type PracticeMode = 'sight-reading' | 'song-play' | 'free-play';
+export type PracticeMode = 'sight-reading' | 'chord-practice' | 'song-play' | 'free-play';
 
 export type FeedbackMode = 'wait' | 'flow';
 

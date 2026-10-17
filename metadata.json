@@ -1,6 +1,6 @@
 {
-  "name": "琴韵练琴伴侣 (Piano Maestro)",
-  "description": "电钢琴与MIDI实时练琴辅助系统，提供五线谱速记识谱、经典曲目跟弹、音符纠错与位置指引、节拍流转打分及个性化演奏分析诊断。",
+  "name": "ONEKEY Piano",
+  "description": "ONEKEY Piano 电钢琴与MIDI智能练琴伴侣，涵盖五线谱速记识谱、常见和弦五线谱特训、经典曲目跟弹与节拍卡点纠错。",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

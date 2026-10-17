@@ -4,6 +4,7 @@ import { getDurationText, isBlackKey, midiToNoteInfo } from '../types/music';
 interface PianoKeyboardProps {
   activeMidiNotes: Set<number>;
   targetMidi: number | null;
+  targetMidiNotes?: number[]; // For chord practice: multiple illuminated keys
   targetDuration?: number; // duration in quarter notes (e.g. 1, 2, 0.5, 4)
   beatProgress?: number; // 0.0 to 1.0 rhythm countdown
   wrongMidi: number | null;
@@ -13,6 +14,11 @@ interface PianoKeyboardProps {
   startOctave: number; // e.g. 2 for C2
   onChangeStartOctave?: (octave: number) => void;
   octaveCount?: number; // default 4 octaves
+  chordInfo?: {
+    symbol: string;
+    name: string;
+    notesDescription?: string;
+  } | null;
 }
 
 const KEYBOARD_SHORTCUTS: Record<string, number> = {
@@ -64,6 +70,7 @@ const MIDI_TO_KEYBOARD_KEY: Record<number, string> = Object.entries(KEYBOARD_SHO
 export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
   activeMidiNotes,
   targetMidi,
+  targetMidiNotes,
   targetDuration = 1,
   beatProgress = 0,
   wrongMidi,
@@ -73,6 +80,7 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
   startOctave,
   onChangeStartOctave,
   octaveCount = 4,
+  chordInfo,
 }) => {
   const minMidi = startOctave * 12 + 12; // e.g. 2 * 12 + 12 = 36 (C2)
   const maxMidi = minMidi + octaveCount * 12; // e.g. 36 + 48 = 84 (C6)
@@ -107,6 +115,11 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
   // Countdown scale for target key ring (starts at scale 1.8, closes to 1.0 on beat)
   const ringScale = Math.max(1.0, 1.8 - beatProgress * 0.8);
 
+  // For chord mode: count how many target notes are pressed
+  const chordPressedCount = targetMidiNotes
+    ? targetMidiNotes.filter((m) => activeMidiNotes.has(m)).length
+    : 0;
+
   return (
     <div className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-3 md:p-4 shadow-xl select-none flex flex-col justify-between">
       {/* Sleek Header with Octave Shift & Rhythm Guide */}
@@ -137,17 +150,42 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
               </button>
             )}
           </div>
+
           <span aria-hidden="true" className="text-slate-700">·</span>
-          <span className="text-emerald-400 flex items-center gap-1.5 font-medium">
-            <span className="w-2.5 h-2.5 rounded-full border-2 border-emerald-400 flex items-center justify-center">
-              <span className="w-1 h-1 rounded-full bg-emerald-400" />
-            </span>
-            <span>节拍倒计光环 (闭合时击键)</span>
-          </span>
-          <span aria-hidden="true" className="text-slate-700">·</span>
-          <span className="text-slate-300 font-mono">
-            当前时值: <strong className="text-emerald-300">{durationInfo.label}</strong>
-          </span>
+
+          {chordInfo ? (
+            <div className="flex items-center gap-2 font-medium">
+              <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold">
+                {chordInfo.symbol} ({chordInfo.name})
+              </span>
+              <span className="text-slate-300 font-mono text-[11px]">
+                {chordInfo.notesDescription}
+              </span>
+              {targetMidiNotes && (
+                <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+                  chordPressedCount === targetMidiNotes.length
+                    ? 'bg-emerald-500 text-slate-950'
+                    : 'bg-slate-800 text-emerald-400 border border-emerald-600/50'
+                }`}>
+                  已按下 {chordPressedCount} / {targetMidiNotes.length} 音
+                </span>
+              )}
+            </div>
+          ) : (
+            <>
+              <span className="text-emerald-400 flex items-center gap-1.5 font-medium">
+                <span className="w-2.5 h-2.5 rounded-full border-2 border-emerald-400 flex items-center justify-center">
+                  <span className="w-1 h-1 rounded-full bg-emerald-400" />
+                </span>
+                <span>节拍倒计光环 (闭合时击键)</span>
+              </span>
+              <span aria-hidden="true" className="text-slate-700">·</span>
+              <span className="text-slate-300 font-mono">
+                当前时值: <strong className="text-emerald-300">{durationInfo.label}</strong>
+              </span>
+            </>
+          )}
+
           {wrongMidi && (
             <>
               <span aria-hidden="true" className="text-slate-700">·</span>
@@ -170,7 +208,10 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
           {/* 1. White Keys */}
           {whiteKeys.map(({ midi, whiteIndex }) => {
             const isPressed = activeMidiNotes.has(midi);
-            const isTarget = targetMidi === midi;
+            const isChordTarget = targetMidiNotes ? targetMidiNotes.includes(midi) : false;
+            const isTarget = targetMidi === midi || isChordTarget;
+            const chordToneIndex = targetMidiNotes ? targetMidiNotes.indexOf(midi) : -1;
+            const chordRole = chordToneIndex === 0 ? '根音' : chordToneIndex === 1 ? '三音' : chordToneIndex === 2 ? '五音' : chordToneIndex === 3 ? '七音' : '';
             const isWrong = wrongMidi === midi;
             const isMiddleC = midi === 60;
             const noteInfo = midiToNoteInfo(midi);
@@ -179,6 +220,8 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
             let bgClass = 'bg-linear-to-b from-white via-slate-50 to-slate-200 text-slate-700';
             if (isWrong) {
               bgClass = 'bg-linear-to-b from-rose-400 to-rose-600 text-white shadow-rose-500/50';
+            } else if (isTarget && isPressed) {
+              bgClass = 'bg-linear-to-b from-emerald-300 via-emerald-400 to-emerald-500 text-emerald-950 ring-2 ring-emerald-500 shadow-emerald-500/40';
             } else if (isTarget) {
               bgClass = 'bg-linear-to-b from-emerald-100 via-emerald-200 to-emerald-400 text-emerald-950 ring-2 ring-emerald-500 ring-inset';
             } else if (isPressed) {
@@ -211,10 +254,22 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
                   <div className="absolute top-2 w-2.5 h-2.5 rounded-full bg-emerald-600 shadow-xs" title="中央 C (C4)" />
                 )}
 
-                {/* Target Synchronized Rhythm Countdown Ring */}
-                {isTarget && (
+                {/* Target Chord Tone Indicator Badge */}
+                {isChordTarget && (
+                  <div className="absolute bottom-11 flex flex-col items-center pointer-events-none">
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md shadow-xs ${
+                      isPressed
+                        ? 'bg-emerald-900 text-emerald-100 ring-1 ring-emerald-300'
+                        : 'bg-emerald-600 text-white'
+                    }`}>
+                      {isPressed ? `✓ ${chordRole}` : chordRole}
+                    </span>
+                  </div>
+                )}
+
+                {/* Target Synchronized Rhythm Countdown Ring (Single target mode) */}
+                {!isChordTarget && isTarget && (
                   <div className="absolute bottom-12 flex flex-col items-center pointer-events-none">
-                    {/* Ring that contracts with rhythm */}
                     <div
                       className="w-7 h-7 rounded-full border-2 border-emerald-600 bg-emerald-500/30 transition-transform duration-75 flex items-center justify-center shadow-xs"
                       style={{
@@ -225,7 +280,6 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
                       <div className="w-2 h-2 rounded-full bg-emerald-700" />
                     </div>
 
-                    {/* Note duration label right on key */}
                     <span className="text-[9px] font-bold text-emerald-900 bg-emerald-300/80 px-1 rounded-xs mt-1 shadow-xs">
                       {durationInfo.label}
                     </span>
@@ -257,7 +311,10 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
           {/* 2. Black Keys */}
           {blackKeys.map(({ midi, whiteIndexBefore }) => {
             const isPressed = activeMidiNotes.has(midi);
-            const isTarget = targetMidi === midi;
+            const isChordTarget = targetMidiNotes ? targetMidiNotes.includes(midi) : false;
+            const isTarget = targetMidi === midi || isChordTarget;
+            const chordToneIndex = targetMidiNotes ? targetMidiNotes.indexOf(midi) : -1;
+            const chordRole = chordToneIndex === 0 ? '根音' : chordToneIndex === 1 ? '三音' : chordToneIndex === 2 ? '五音' : chordToneIndex === 3 ? '七音' : '';
             const isWrong = wrongMidi === midi;
             const noteInfo = midiToNoteInfo(midi);
             const shortcutKey = MIDI_TO_KEYBOARD_KEY[midi];
@@ -267,6 +324,8 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
             let bgClass = 'bg-linear-to-b from-slate-800 via-slate-900 to-black text-slate-300 border-slate-950';
             if (isWrong) {
               bgClass = 'bg-linear-to-b from-rose-600 to-rose-900 text-white border-rose-500 shadow-lg shadow-rose-900/60';
+            } else if (isTarget && isPressed) {
+              bgClass = 'bg-linear-to-b from-emerald-400 via-emerald-500 to-emerald-600 text-emerald-950 border-emerald-300 ring-2 ring-emerald-300 shadow-emerald-500/50';
             } else if (isTarget) {
               bgClass = 'bg-linear-to-b from-emerald-600 to-emerald-900 text-emerald-100 border-emerald-400 ring-2 ring-emerald-400';
             } else if (isPressed) {
@@ -294,8 +353,19 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
                 }}
                 className={`absolute top-0 h-[62%] z-10 border rounded-b-md shadow-md transition-all duration-75 flex flex-col justify-end items-center pb-2 cursor-pointer active:translate-y-0.5 ${bgClass}`}
               >
-                {/* Target Synchronized Rhythm Countdown on Black Key */}
-                {isTarget && (
+                {/* Chord Target on Black Key */}
+                {isChordTarget && (
+                  <div className="absolute bottom-7 flex flex-col items-center pointer-events-none">
+                    <span className={`text-[9px] font-bold px-1 rounded-sm shadow-xs ${
+                      isPressed ? 'bg-emerald-950 text-emerald-200' : 'bg-emerald-500 text-slate-950'
+                    }`}>
+                      {isPressed ? `✓ ${chordRole}` : chordRole}
+                    </span>
+                  </div>
+                )}
+
+                {/* Target Synchronized Rhythm Countdown on Black Key (Single target mode) */}
+                {!isChordTarget && isTarget && (
                   <div className="absolute bottom-8 flex flex-col items-center pointer-events-none">
                     <div
                       className="w-5 h-5 rounded-full border-2 border-emerald-300 bg-emerald-400/40 transition-transform duration-75 flex items-center justify-center shadow-xs"

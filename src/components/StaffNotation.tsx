@@ -1,5 +1,6 @@
 import React from 'react';
 import { ClefType, getDurationText, midiToNoteInfo, SheetNote } from '../types/music';
+import { ChordItem } from '../data/chordLibrary';
 
 interface StaffNotationProps {
   currentNote: SheetNote | null;
@@ -19,6 +20,11 @@ interface StaffNotationProps {
   toleranceMs?: number;
   feedbackMode?: 'wait' | 'flow';
   onOpenHowToPlay?: () => void;
+  // Chord practice extras
+  currentChord?: ChordItem | null;
+  chordPlayStyle?: 'block' | 'broken';
+  pressedChordMidis?: Set<number>;
+  onChangeChordPlayStyle?: (style: 'block' | 'broken') => void;
 }
 
 const TREBLE_BOTTOM_Y = 100; // Line 1 (E4, diatonic 30)
@@ -76,6 +82,10 @@ export const StaffNotation: React.FC<StaffNotationProps> = ({
   toleranceMs = 120,
   feedbackMode = 'wait',
   onOpenHowToPlay,
+  currentChord,
+  chordPlayStyle = 'block',
+  pressedChordMidis,
+  onChangeChordPlayStyle,
 }) => {
   const currentNoteInfo = currentNote ? midiToNoteInfo(currentNote.midi) : null;
   const lastPlayedInfo = lastPlayedMidi ? midiToNoteInfo(lastPlayedMidi) : null;
@@ -277,6 +287,139 @@ export const StaffNotation: React.FC<StaffNotationProps> = ({
         )}
       </g>
     );
+  // Render a stacked chord (柱式和弦) glyph
+  const renderBlockChordGlyph = (chord: ChordItem, x: number) => {
+    const chordNotes = chord.midis.map((m, idx) => {
+      const info = midiToNoteInfo(m);
+      const clef = chord.clef || info.clef;
+      const y = getNoteY(info.diatonicStep, clef);
+      const ledgerYList = getLedgerLines(info.diatonicStep, clef);
+      const isPressed = pressedChordMidis?.has(m);
+      const role = idx === 0 ? '根音' : idx === 1 ? '三音' : idx === 2 ? '五音' : '七音';
+      return { midi: m, info, clef, y, ledgerYList, isPressed, role };
+    });
+
+    const ys = chordNotes.map((n) => n.y);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+    const allPressed = chord.midis.every((m) => pressedChordMidis?.has(m));
+
+    return (
+      <g key={`chord-glyph-${chord.id}`} className="transition-all duration-100">
+        {/* Floating Chord Name Pill above staff */}
+        <g transform={`translate(${x - 42}, 14)`}>
+          <rect
+            width="84"
+            height="26"
+            rx="6"
+            fill="#0F172A"
+            stroke={allPressed ? '#10B981' : '#0284C7'}
+            strokeWidth="1.8"
+            className="shadow-sm"
+          />
+          <text
+            x="42"
+            y="17"
+            textAnchor="middle"
+            fill={allPressed ? '#34D399' : '#38BDF8'}
+            fontSize="12"
+            fontWeight="bold"
+            fontFamily="monospace"
+          >
+            {chord.symbol} {allPressed ? '✓' : ''}
+          </text>
+        </g>
+
+        {/* Vertical Shared Stem */}
+        <line
+          x1={x + 6}
+          y1={minY - 30}
+          x2={x + 6}
+          y2={maxY}
+          stroke={allPressed ? '#059669' : '#0F172A'}
+          strokeWidth="2.5"
+          strokeLinecap="round"
+        />
+
+        {/* Individual chord tone noteheads */}
+        {chordNotes.map(({ midi, info, y, ledgerYList, isPressed, role }) => {
+          const strokeColor = isPressed ? '#059669' : '#0284C7';
+          const fillColor = isPressed ? '#059669' : '#F0F9FF';
+
+          return (
+            <g key={`chord-note-${midi}`}>
+              {/* Ledger lines */}
+              {ledgerYList.map((ly, lIdx) => (
+                <line
+                  key={`chord-ledger-${midi}-${lIdx}`}
+                  x1={x - 14}
+                  y1={ly}
+                  x2={x + 14}
+                  y2={ly}
+                  stroke="#334155"
+                  strokeWidth="2"
+                />
+              ))}
+
+              {/* Accidental */}
+              {info.accidental === 'sharp' && (
+                <text
+                  x={x - 18}
+                  y={y + 5}
+                  fontSize="19"
+                  fontWeight="bold"
+                  fill={strokeColor}
+                  className="select-none font-mono"
+                >
+                  ♯
+                </text>
+              )}
+              {info.accidental === 'flat' && (
+                <text
+                  x={x - 18}
+                  y={y + 4}
+                  fontSize="19"
+                  fontWeight="bold"
+                  fill={strokeColor}
+                  className="select-none font-mono"
+                >
+                  ♭
+                </text>
+              )}
+
+              {/* Hit Halo */}
+              {isPressed && (
+                <circle cx={x} cy={y} r="14" fill="rgba(16, 185, 129, 0.25)" />
+              )}
+
+              {/* Notehead */}
+              <ellipse
+                cx={x}
+                cy={y}
+                rx="7"
+                ry="5"
+                transform={`rotate(-28 ${x} ${y})`}
+                fill={fillColor}
+                stroke={strokeColor}
+                strokeWidth="2.2"
+              />
+
+              {/* Label on right showing note name, solfege & role */}
+              <text
+                x={x + 18}
+                y={y + 4}
+                fontSize="11"
+                fontWeight="bold"
+                fill={isPressed ? '#059669' : '#0369A1'}
+                className="select-none font-mono"
+              >
+                {info.name} ({role}) {isPressed ? '✓' : ''}
+              </text>
+            </g>
+          );
+        })}
+      </g>
+    );
   };
 
   return (
@@ -288,31 +431,74 @@ export const StaffNotation: React.FC<StaffNotationProps> = ({
         <div className="flex items-center gap-3">
           <span className="font-semibold text-slate-800">五线谱大谱表</span>
           <span aria-hidden="true" className="text-slate-300">·</span>
-          {/* Metronome Beat Lamps (1 2 3 4) */}
-          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-900/10 rounded-lg">
-            <span className="text-[10px] text-slate-500 font-mono">拍点:</span>
-            {[1, 2, 3, 4].map((beatNum) => {
-              const isActive = currentBeat === beatNum;
-              const isDownbeat = beatNum === 1;
-              return (
-                <div
-                  key={beatNum}
-                  className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold font-mono transition-all duration-75 ${
-                    isActive
-                      ? isDownbeat
-                        ? 'bg-emerald-600 text-white scale-110 shadow-xs'
-                        : 'bg-amber-500 text-slate-950 scale-105'
-                      : 'bg-slate-300/80 text-slate-600'
-                  }`}
-                >
-                  {beatNum}
+
+          {currentChord ? (
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded-lg bg-emerald-600 text-white font-bold text-xs shadow-xs">
+                {currentChord.symbol}
+              </span>
+              <span className="font-bold text-slate-900 text-xs">
+                {currentChord.name}
+              </span>
+              <span className="text-[11px] text-slate-500 font-mono hidden md:inline">
+                ({currentChord.notesDescription})
+              </span>
+              {onChangeChordPlayStyle && (
+                <div className="flex items-center gap-1 ml-2 bg-slate-900/10 p-0.5 rounded-lg">
+                  <button
+                    type="button"
+                    onClick={() => onChangeChordPlayStyle('block')}
+                    className={`px-2 py-0.5 rounded-md text-[10px] font-bold cursor-pointer transition-colors ${
+                      chordPlayStyle === 'block'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    柱式同时弹
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onChangeChordPlayStyle('broken')}
+                    className={`px-2 py-0.5 rounded-md text-[10px] font-bold cursor-pointer transition-colors ${
+                      chordPlayStyle === 'broken'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    分解琶音
+                  </button>
                 </div>
-              );
-            })}
-          </div>
-          <span className="text-[11px] font-mono text-slate-500">
-            {bpm} BPM
-          </span>
+              )}
+            </div>
+          ) : (
+            <>
+              {/* Metronome Beat Lamps (1 2 3 4) */}
+              <div className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-900/10 rounded-lg">
+                <span className="text-[10px] text-slate-500 font-mono">拍点:</span>
+                {[1, 2, 3, 4].map((beatNum) => {
+                  const isActive = currentBeat === beatNum;
+                  const isDownbeat = beatNum === 1;
+                  return (
+                    <div
+                      key={beatNum}
+                      className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold font-mono transition-all duration-75 ${
+                        isActive
+                          ? isDownbeat
+                            ? 'bg-emerald-600 text-white scale-110 shadow-xs'
+                            : 'bg-amber-500 text-slate-950 scale-105'
+                          : 'bg-slate-300/80 text-slate-600'
+                      }`}
+                    >
+                      {beatNum}
+                    </div>
+                  );
+                })}
+              </div>
+              <span className="text-[11px] font-mono text-slate-500">
+                {bpm} BPM
+              </span>
+            </>
+          )}
         </div>
 
         {/* Real-time Rhythm Timing Offset Runway Gauge (毫秒级早晚偏差可视化判定标尺) */}
@@ -523,20 +709,46 @@ export const StaffNotation: React.FC<StaffNotationProps> = ({
           <line x1="810" y1="52" x2="810" y2="204" stroke="#64748B" strokeWidth="1" />
           <line x1="816" y1="52" x2="816" y2="204" stroke="#1E293B" strokeWidth="3" />
 
-          {/* Target Note at X=240 */}
-          {currentNote && renderNoteGlyph(currentNote, 240, 'active', 0)}
+          {/* Target Note / Chord at X=240 */}
+          {currentChord && chordPlayStyle === 'block' ? (
+            renderBlockChordGlyph(currentChord, 240)
+          ) : (
+            currentNote && renderNoteGlyph(currentNote, 240, 'active', 0)
+          )}
 
           {/* Upcoming Notes stream */}
-          {upcomingNotes.map((note, idx) => {
-            const x = 240 + (idx + 1) * 92;
-            if (x > 780) return null;
-            return renderNoteGlyph(note, x, 'upcoming', idx + 1);
-          })}
+          {(!currentChord || chordPlayStyle === 'broken') &&
+            upcomingNotes.map((note, idx) => {
+              const x = 240 + (idx + 1) * 92;
+              if (x > 780) return null;
+              return renderNoteGlyph(note, x, 'upcoming', idx + 1);
+            })}
         </svg>
       </div>
 
-      {/* Position Correction Hint (only shows when user presses wrong key) */}
-      {lastEvaluation && !lastEvaluation.isCorrect && currentNote && (
+      {/* Chord Guidance Hint (When in block chord mode) */}
+      {currentChord && chordPlayStyle === 'block' && (
+        <div className="mt-1 py-1.5 px-3.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs text-emerald-950 shadow-xs animate-fadeIn">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-emerald-800">和弦指法与构成:</span>
+            <span>
+              {currentChord.name} ({currentChord.symbol}) 包含音: <strong className="font-mono text-emerald-700">{currentChord.notesDescription}</strong>
+              <span className="text-slate-500 ml-1.5 hidden sm:inline">({currentChord.fingerHints || currentChord.formula})</span>
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0 ml-2">
+            <span className="text-[11px] font-bold text-emerald-800">
+              已按下:
+            </span>
+            <span className="px-2 py-0.5 rounded-md bg-emerald-600 text-white font-mono text-[10px] font-bold">
+              {currentChord.midis.filter((m) => pressedChordMidis?.has(m)).length} / {currentChord.midis.length} 音
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Position Correction Hint (only shows when user presses wrong key in single-note mode) */}
+      {(!currentChord || chordPlayStyle === 'broken') && lastEvaluation && !lastEvaluation.isCorrect && currentNote && (
         <div className="mt-1 py-1.5 px-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between text-xs text-rose-900 shadow-xs animate-fadeIn">
           <div className="flex items-center gap-2">
             <span className="font-bold text-rose-700">琴键位置纠正:</span>
